@@ -8,7 +8,7 @@ import static spark.Spark.*;
 public class Server {
 
     public static void start() {
-        port(8080);
+        port(7777);
         options("/*", (request, response) -> {
             String accessControlRequestHeaders = request
                     .headers("Access-Control-Request-Headers");
