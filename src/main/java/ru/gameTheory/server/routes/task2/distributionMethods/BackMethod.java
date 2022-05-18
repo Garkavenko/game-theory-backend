@@ -16,17 +16,12 @@ public class BackMethod implements IMethod {
         users.sort(Comparator.comparingInt(User::getOrder));
         for (User user : users) {
             Double sumOther = users.stream()
-                    .filter(user1 -> user1.getOrder() >= user.getOrder())
                     .map(user1 -> user1.getEvaluations().get(user1.getEvaluations().size() - 1))
-                    .reduce(0.0, (aDouble, aDouble2) -> aDouble + (1 / aDouble2));
-            Double alreadyDistributedSum = users.stream()
-                    .filter(user1 -> user1.getOrder() < user.getOrder())
-                    .map(user1 -> user1.getDistributions().get(user1.getDistributions().size() - 1))
                     .reduce(0.0, Double::sum);
 
             user.getDistributions().add(
-                    ((1 / user.getEvaluations().get(user.getEvaluations().size() - 1)) / sumOther)
-                            * (room.getResource() - alreadyDistributedSum)
+                    user.getEvaluations().get(user.getEvaluations().size() - 1)
+                    * (1 - (room.getResource() / sumOther))
             );
         }
     }
@@ -37,17 +32,12 @@ public class BackMethod implements IMethod {
         List<Double> distributions = new LinkedList<>();
         for (User user : users) {
             Double sumOther = users.stream()
-                    .filter(user1 -> user1.getOrder() >= user.getOrder())
                     .map(user1 -> user1.getEvaluations().get(user1.getEvaluations().size() - 1))
-                    .reduce(0.0, (aDouble, aDouble2) -> aDouble + (1 / aDouble2));
-            Double alreadyDistributedSum = users.stream()
-                    .filter(user1 -> user1.getOrder() < user.getOrder())
-                    .map(user1 -> user1.getDistributions().get(user1.getDistributions().size() - 1))
                     .reduce(0.0, Double::sum);
 
             distributions.add(
-                    ((1 / user.getEvaluations().get(user.getEvaluations().size() - 1)) / sumOther)
-                            * (room.getResource() - alreadyDistributedSum)
+                    ( user.getEvaluations().get(user.getEvaluations().size() - 1)
+                            * (1 - (room.getResource() / sumOther)))
             );
         }
         return distributions;

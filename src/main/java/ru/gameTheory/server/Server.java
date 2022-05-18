@@ -36,6 +36,7 @@ public class Server {
         post("/setUsers", Task1::setUsers);
         post("/stopRoom", Task1::stopRoom);
         post("/setUserDecision", Task1::setUserDecision);
+        post("/setUserSeeAbility", Task1::setUserSeeAbility);
 
         post("/task2/createRoom", Task2::createRoom);
         post("/task2/finishRegistration", Task2::finishRegistration);
@@ -46,6 +47,7 @@ public class Server {
         post("/task2/setUsers", Task2::setUsers);
         post("/task2/stopRoom", Task2::stopRoom);
         post("/task2/setUserDecision", Task2::setUserDecision);
+        post("/task2/setUserSeeAbility", Task2::setUserSeeAbility);
 
     }
 }

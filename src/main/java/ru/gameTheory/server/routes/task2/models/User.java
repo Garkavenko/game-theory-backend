@@ -11,21 +11,23 @@ public class User {
     private Double cost;
     private Long roomId;
     private Integer order;
+    private Boolean canSeeOthers = false;
 
     public boolean isFirstEvaluationInit() {
         return this.evaluations.size() > 1;
     }
 
-    public void calcResult(final Double lambda) {
+    public void calcResult(final Double lambda, Double penalty) {
         if (this.results.size() == this.distributions.size()) {
             return;
         }
         Double lastDist = this.distributions.get(this.distributions.size() - 1);
-        this.results.add(getLastResult(lastDist, lambda));
+        this.results.add(getLastResult(lastDist, lambda, penalty));
     }
 
-    public Double getLastResult(Double lastDist, Double lambda) {
-        return (lambda * lastDist) - (Math.pow(lastDist, 2) / (2 * this.cost));
+    public Double getLastResult(Double lastDist, Double lambda, Double penalty) {
+        double result = (lambda * lastDist) - (Math.pow(lastDist, 2) / (2 * this.cost));
+        return result - penalty * (this.getEvaluations().get(this.evaluations.size() - 1) - this.cost);
     }
 
     public Long getId() {
@@ -82,5 +84,13 @@ public class User {
 
     public void setDistributions(List<Double> distributions) {
         this.distributions = distributions;
+    }
+
+    public Boolean getCanSeeOthers() {
+        return canSeeOthers;
+    }
+
+    public void setCanSeeOthers(Boolean canSeeOthers) {
+        this.canSeeOthers = canSeeOthers;
     }
 }

@@ -13,6 +13,7 @@ public class Room {
     private String status;
     private Boolean started;
     private List<Double> centerResults = new LinkedList<>();
+    private List<Double> lambdas = new LinkedList<>();
     private Double resource;
     private Long nextTickAfter;
     private Long nextTickAt;
@@ -171,5 +172,13 @@ public class Room {
 
     public void setUsersNumber(Integer usersNumber) {
         this.usersNumber = usersNumber;
+    }
+
+    public List<Double> getLambdas() {
+        return lambdas;
+    }
+
+    public void setLambdas(List<Double> lambdas) {
+        this.lambdas = lambdas;
     }
 }

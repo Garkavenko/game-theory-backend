@@ -62,6 +62,10 @@ public class Task2 {
         final Long userId = claimMap.get("userId").asLong();
         final Optional<Room> roomOptional = RoomsDao.rooms.stream().filter(room -> Objects.equals(room.getId(), roomId)).findFirst();
         final Optional<User> userOptional = Users.users.stream().filter(user -> Objects.equals(user.getId(), userId)).findFirst();
+        final List<User> users = Users.users.stream()
+                .filter(user -> Objects.equals(user.getRoomId(), roomId))
+                .sorted(Comparator.comparingLong(User::getId))
+                .collect(Collectors.toList());
 
         if (roomOptional.isPresent() && userOptional.isPresent()) {
             final Room room = roomOptional.get();
@@ -70,7 +74,11 @@ public class Task2 {
             result.put("results", user.getResults());
             result.put("order", user.getOrder());
             result.put("evaluations", user.getEvaluations());
-            result.put("initValuePassed", user.isFirstEvaluationInit());
+            result.put("initValuePassed", false);
+            result.put("users", users);
+            result.put("canSeeOthers", user.getCanSeeOthers());
+            result.put("roomResults", room.getCenterResults());
+            result.put("lambdas", room.getLambdas());
             result.put("cost", user.getCost());
             result.put("roomStarted", room.getStarted());
             result.put("nextTickAt", room.getNextTickAt());
@@ -119,6 +127,7 @@ public class Task2 {
             result.put("roomType", room.getRoomType());
             result.put("nextStepAfter", room.getNextTickAt() - new Date().getTime());
             result.put("nextTickAt", room.getNextTickAt());
+            result.put("lambdas", room.getLambdas());
             result.put("currentStep", room.getCurrentStepNumber());
             result.put("step", room.getStep());
             result.put("finished", room.getFinished());
@@ -167,7 +176,7 @@ public class Task2 {
                 return "{}";
             }
 
-            if (!user.isFirstEvaluationInit()) {
+            if (!false) {
                 user.getEvaluations().add(body.initValue);
             } else {
                 switch (body.decision) {
@@ -197,6 +206,27 @@ public class Task2 {
                         .ifPresent(Cron::flush);
             }
         }
+
+        return "{}";
+    }
+
+    private static class SetUserSeeAbilityBody {
+        private boolean canSee;
+        private Integer userOrder;
+        private String token;
+    }
+    public static String setUserSeeAbility(Request request, Response response) {
+        final Gson gson = new Gson();
+        final SetUserSeeAbilityBody setUserSeeAbilityBody = gson.fromJson(request.body(), SetUserSeeAbilityBody.class);
+
+        final Map<String, Claim> claimMap = JWT.getJWTClaims(setUserSeeAbilityBody.token);
+        final Long roomId = claimMap.get("roomId").asLong();
+
+        Users.users.stream().filter(u -> Objects.equals(u.getOrder(), setUserSeeAbilityBody.userOrder) && u.getRoomId().equals(roomId))
+                .findFirst()
+                .ifPresent(u -> {
+                    u.setCanSeeOthers(setUserSeeAbilityBody.canSee);
+                });
 
         return "{}";
     }
@@ -295,7 +325,11 @@ public class Task2 {
         final Room newRoom = new Room();
         final CreateRoomBody body = (new Gson()).fromJson(request.body(), CreateRoomBody.class);
         newRoom.setId(RoomsDao.lastRoomId++);
-        newRoom.setPenalty(body.penalty);
+        if (body.penalty != null) {
+            newRoom.setPenalty(body.penalty);
+        } else {
+            newRoom.setPenalty(0.0);
+        }
         newRoom.setResource(body.resource);
         newRoom.setPriorityMethod(body.priorityMethod);
         newRoom.setStep(body.step);

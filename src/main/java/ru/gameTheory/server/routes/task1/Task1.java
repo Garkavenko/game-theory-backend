@@ -3,9 +3,6 @@ package ru.gameTheory.server.routes.task1;
 import com.auth0.jwt.interfaces.Claim;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import org.eclipse.jetty.util.log.Log;
 import ru.gameTheory.server.routes.task1.controllers.ConnectUserController;
 import ru.gameTheory.server.routes.task1.dao.RoomsDao;
 import ru.gameTheory.server.routes.task1.dao.Users;
@@ -65,6 +62,10 @@ public class Task1 {
         final Long userId = claimMap.get("userId").asLong();
         final Optional<Room> roomOptional = RoomsDao.rooms.stream().filter(room -> Objects.equals(room.getId(), roomId)).findFirst();
         final Optional<User> userOptional = Users.users.stream().filter(user -> Objects.equals(user.getId(), userId)).findFirst();
+        final List<User> users = Users.users.stream()
+                .filter(user -> Objects.equals(user.getRoomId(), roomId))
+                .sorted(Comparator.comparingLong(User::getId))
+                .collect(Collectors.toList());
 
         if (roomOptional.isPresent() && userOptional.isPresent()) {
             final Room room = roomOptional.get();
@@ -73,7 +74,10 @@ public class Task1 {
             result.put("results", user.getResults());
             result.put("order", user.getOrder());
             result.put("evaluations", user.getEvaluations());
-            result.put("initValuePassed", user.isFirstEvaluationInit());
+            result.put("initValuePassed", false);
+            result.put("users", users);
+            result.put("canSeeOthers", user.getCanSeeOthers());
+            result.put("roomResults", room.getCenterResults());
             result.put("cost", user.getCost());
             result.put("roomStarted", room.getStarted());
             result.put("nextTickAt", room.getNextTickAt());
@@ -170,7 +174,7 @@ public class Task1 {
                 return "{}";
             }
 
-            if (!user.isFirstEvaluationInit()) {
+            if (!false) {
                 user.getEvaluations().add(body.initValue);
             } else {
                 switch (body.decision) {
@@ -214,6 +218,28 @@ public class Task1 {
         private List<UserSetting> initValues = new LinkedList<>();
         private String token;
     }
+
+    private static class SetUserSeeAbilityBody {
+        private boolean canSee;
+        private Integer userOrder;
+        private String token;
+    }
+    public static String setUserSeeAbility(Request request, Response response) {
+        final Gson gson = new Gson();
+        final SetUserSeeAbilityBody setUserSeeAbilityBody = gson.fromJson(request.body(), SetUserSeeAbilityBody.class);
+
+        final Map<String, Claim> claimMap = JWT.getJWTClaims(setUserSeeAbilityBody.token);
+        final Long roomId = claimMap.get("roomId").asLong();
+
+        Users.users.stream().filter(u -> Objects.equals(u.getOrder(), setUserSeeAbilityBody.userOrder) && u.getRoomId().equals(roomId))
+                .findFirst()
+                .ifPresent(u -> {
+                    u.setCanSeeOthers(setUserSeeAbilityBody.canSee);
+                });
+
+        return "{}";
+    }
+
 
     public static String setUsers(Request request, Response response) {
         final Gson gson = new Gson();
@@ -298,7 +324,11 @@ public class Task1 {
         final Room newRoom = new Room();
         final CreateRoomBody body = (new Gson()).fromJson(request.body(), CreateRoomBody.class);
         newRoom.setId(RoomsDao.lastRoomId++);
-        newRoom.setPenalty(body.penalty);
+        if (body.penalty != null) {
+            newRoom.setPenalty(body.penalty);
+        } else {
+            newRoom.setPenalty(0.0);
+        }
         newRoom.setResource(body.resource);
         newRoom.setPriorityMethod(body.priorityMethod);
         newRoom.setStep(body.step);

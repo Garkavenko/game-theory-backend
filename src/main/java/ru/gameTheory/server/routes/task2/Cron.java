@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Cron {
 
@@ -66,9 +67,10 @@ public class Cron {
                     } else {
                         throw new RuntimeException("Priority Method not supported");
                     }
-                    //final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
-                    final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
-                    users.forEach(u -> u.calcResult(lambda));
+                    final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
+                    //final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
+                    users.forEach(u -> u.calcResult(lambda, room.getPenalty()));
+                    room.getLambdas().add(lambda);
                     room.calcResult(users);
 
                     room.setNextTickAt(new Date().getTime() + 30000);
@@ -128,7 +130,7 @@ public class Cron {
                                 .collect(Collectors.toList());
 
                         if (room.getCenterResults().size() > 2) {
-                            final boolean isNash = users.stream().allMatch((user1) -> {
+                            /*final boolean isNash = users.stream().allMatch((user1) -> {
                                 final Double prevE1U = user1.getEvaluations().get(user1.getEvaluations().size() - 1);
                                 final Double prevE2U = user1.getEvaluations().get(user1.getEvaluations().size() - 2);
 
@@ -158,8 +160,8 @@ public class Cron {
                                         }
                                         return newUser;
                                     }).collect(Collectors.toList()));
-                                    //final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
-                                    final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
+                                    final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
+                                    //final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
                                     if (user1.getLastResult(distributions.get(user1.getOrder() - 1), lambda) <= prev1U) {
                                         return true;
                                     }
@@ -170,7 +172,57 @@ public class Cron {
                                 room.setFinished(true);
                                 clear();
                                 return;
+                            }*/
+
+
+                            final boolean isNash = users.stream().allMatch((user1) -> {
+                                final Double prevE1U = user1.getEvaluations().get(user1.getEvaluations().size() - 1);
+                                final Double prevE2U = user1.getEvaluations().get(user1.getEvaluations().size() - 2);
+
+                                final Double prev1U = user1.getResults().get(user1.getResults().size() - 1);
+                                final Double prev2U = user1.getResults().get(user1.getResults().size() - 2);
+
+                                final Integer min = 1;
+                                final Integer max = (int) ((double) room.getResource());
+
+                                boolean allMatched = true;
+                                return IntStream.range(min, max + 1).allMatch(i -> {
+                                //return IntStream.range((int) (prevE1U - room.getStep()), (int) (prevE1U + room.getStep())).allMatch(i -> {
+                                    if (i == prevE1U) return true;
+                                    if (Math.abs(prevE1U - i) % room.getStep() != 0) return true;
+                                    if (users.stream().map(u -> u.getId() == user1.getId() ? (double) i : u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(0.0, Double::sum) < room.getResource()) {
+                                        return true;
+                                    }
+
+                                    final List<User> newList = users.stream().map(user3 -> {
+                                        final User newUser = new User();
+                                        newUser.setOrder(user3.getOrder());
+                                        newUser.setEvaluations(new LinkedList<>(user3.getEvaluations()));
+                                        newUser.setDistributions(new LinkedList<>(user3.getDistributions()));
+                                        if (user3.getId().equals(user1.getId())) {
+                                            newUser.getEvaluations().add((double) i);
+                                        } else {
+                                            newUser.getEvaluations().add(newUser.getEvaluations().get(newUser.getEvaluations().size() - 1));
+                                        }
+                                        return newUser;
+                                    }).collect(Collectors.toList());
+                                    final List<Double> distributions = getMethod(room.getPriorityMethod()).getDistributions(room, newList);
+                                    final Double lambda = room.getResource() / (newList.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
+                                    if (user1.getLastResult(distributions.get(user1.getOrder() - 1), lambda, room.getPenalty()) > prev1U) {
+                                        System.out.println("=================DEBUG");
+                                        System.out.println("NO, " + user1.getOrder() + " can put " + i + " to win on step " + room.getCenterResults().size() + 1);
+                                        System.out.println("=================DEBUG END");
+                                    }
+                                    return user1.getLastResult(distributions.get(user1.getOrder() - 1), lambda, room.getPenalty()) <= prev1U;
+                                });
+                            });
+                            if (isNash) {
+                                room.setFinished(true);
+                                clear();
+                                return;
                             }
+
+
                             /*final boolean isNash = users.stream().allMatch((user1) -> {
                                 final Double prevE1U = user1.getEvaluations().get(user1.getEvaluations().size() - 1);
                                 final Double prevE2U = user1.getEvaluations().get(user1.getEvaluations().size() - 2);
@@ -265,10 +317,11 @@ public class Cron {
 
 
                         getMethod(room.getPriorityMethod()).calc(room, users);
-                        //final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
-                        final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
-                        users.forEach(u -> u.calcResult(lambda));
+                        final Double lambda = room.getResource() / (users.stream().map(u -> u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(Double::sum).get());
+                        //final Double lambda = room.getResource() / (users.stream().map(u -> u.getCost()).reduce(Double::sum).get());
+                        users.forEach(u -> u.calcResult(lambda, room.getPenalty()));
                         room.calcResult(users);
+                        room.getLambdas().add(lambda);
 
                         room.setNextTickAt(new Date().getTime() + 30000);
                         room.setCurrentStepNumber(room.getCurrentStepNumber() + 1);
