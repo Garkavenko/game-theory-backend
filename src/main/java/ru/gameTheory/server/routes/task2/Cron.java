@@ -64,6 +64,9 @@ public class Cron {
                         new ConcaveMethod().calc(room, users);
                     } else if (Objects.equals(room.getPriorityMethod(), LinearMethod.METHOD_ID)) {
                         new LinearMethod().calc(room, users);
+                    }
+                    else if (Objects.equals(room.getPriorityMethod(), BackMethod.METHOD_ID)) {
+                        new BackMethod().calc(room, users);
                     } else {
                         throw new RuntimeException("Priority Method not supported");
                     }
@@ -73,9 +76,9 @@ public class Cron {
                     room.getLambdas().add(lambda);
                     room.calcResult(users);
 
-                    room.setNextTickAt(new Date().getTime() + 30000);
+                    room.setNextTickAt(new Date().getTime() + 120000);
                     room.setCurrentStepNumber(room.getCurrentStepNumber() + 1);
-                    scheduledFuture = scheduler.schedule(this.runnable, 30, TimeUnit.MINUTES);
+                    scheduledFuture = scheduler.schedule(this.runnable, 2, TimeUnit.MINUTES);
                 } else {
                     clear();
                 }
@@ -190,7 +193,7 @@ public class Cron {
                                 //return IntStream.range((int) (prevE1U - room.getStep()), (int) (prevE1U + room.getStep())).allMatch(i -> {
                                     if (i == prevE1U) return true;
                                     if (Math.abs(prevE1U - i) % room.getStep() != 0) return true;
-                                    if (users.stream().map(u -> u.getId() == user1.getId() ? (double) i : u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(0.0, Double::sum) < room.getResource()) {
+                                    if (users.stream().map(u -> u.getId().equals(user1.getId()) ? (double) i : u.getEvaluations().get(u.getEvaluations().size() - 1)).reduce(0.0, Double::sum) < room.getResource()) {
                                         return true;
                                     }
 

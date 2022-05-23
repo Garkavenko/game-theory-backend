@@ -70,9 +70,9 @@ public class Cron {
                     users.forEach(u -> u.calcResult(room.getPenalty()));
                     room.calcResult(users);
 
-                    room.setNextTickAt(new Date().getTime() + 30000);
+                    room.setNextTickAt(new Date().getTime() + 120000);
                     room.setCurrentStepNumber(room.getCurrentStepNumber() + 1);
-                    scheduledFuture = scheduler.schedule(this.runnable, 30, TimeUnit.MINUTES);
+                    scheduledFuture = scheduler.schedule(this.runnable, 2, TimeUnit.MINUTES);
                 } else {
                     clear();
                 }
